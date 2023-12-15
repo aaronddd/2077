@@ -34,6 +34,47 @@ Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.ComponentModel
 #XAML File of WPF as windows for playing movie
 
+# Load the Core Audio API
+
+
+# Set the sys_volume
+Add-Type -TypeDefinition @"
+    using System;
+    using System.Runtime.InteropServices;
+
+    [Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioEndpointVolume {
+        void _VtblGap1_6();
+        void SetMasterVolumeLevelScalar(float fLevel, Guid pguidEventContext);
+    }
+
+    [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
+    class MMDeviceEnumeratorComObject { }
+
+    public class AudioUtilities {
+        [DllImport("ole32.dll")]
+        public static extern int CoCreateInstance(ref Guid clsid, [MarshalAs(UnmanagedType.IUnknown)] object inner,
+            uint context, ref Guid uuid, out object rReturnedComObject);
+
+        public static IAudioEndpointVolume GetMasterVolume() {
+            var enumerator = new MMDeviceEnumeratorComObject();
+            object o;
+            var iid = typeof(IAudioEndpointVolume).GUID;
+            CoCreateInstance(ref enumerator.GetType().GUID, enumerator, 0x1,
+                ref iid, out o);
+            return (IAudioEndpointVolume)o;
+        }
+    }
+"@
+
+# Set the volume to 100%
+$volume = [AudioUtilities]::GetMasterVolume()
+$volume.SetMasterVolumeLevelScalar(1.0, [Guid]::Empty)
+
+
+
+
+
 [xml]$XAML = @"
  
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -56,6 +97,7 @@ $VideoPlayer = $Window.FindName("VideoPlayer")
 $VideoPlayer.Volume = 100;
 $VideoPlayer.Source = $VideoSource;
 #$VideoPlayer.Padding = new Thickness(5);
+[Audio]::Volume = 1
 
 
 Target-Comes
